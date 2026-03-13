@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TITANIC - Iceberg Dodge",
+  title: "Harry's Titanic - Iceberg Dodge",
   description: "Dodge the icebergs! A mobile-first browser game.",
 };
 

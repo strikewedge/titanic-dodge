@@ -920,12 +920,12 @@ export class Game {
     // Title text
     ctx.textAlign = "center";
 
-    // TITANIC
-    ctx.font = `bold ${Math.min(w * 0.16, 72)}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    // Title
+    ctx.font = `bold ${Math.min(w * 0.11, 52)}px -apple-system, BlinkMacSystemFont, sans-serif`;
     ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-    ctx.fillText("TITANIC", w / 2 + 2, h * 0.18 + 2);
+    ctx.fillText("HARRY'S TITANIC", w / 2 + 2, h * 0.18 + 2);
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText("TITANIC", w / 2, h * 0.18);
+    ctx.fillText("HARRY'S TITANIC", w / 2, h * 0.18);
 
     // Subtitle
     ctx.font = `${Math.min(w * 0.04, 16)}px -apple-system, BlinkMacSystemFont, sans-serif`;
