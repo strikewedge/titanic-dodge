@@ -34,12 +34,11 @@ export default function Home() {
     };
     window.addEventListener("keydown", onKeyDown);
 
-    // Prevent default touch behaviors (pull-to-refresh, scroll)
-    const preventTouch = (e: TouchEvent) => {
+    // Prevent pull-to-refresh / scroll on the canvas only (not buttons)
+    const preventTouchMove = (e: TouchEvent) => {
       e.preventDefault();
     };
-    document.addEventListener("touchmove", preventTouch, { passive: false });
-    document.addEventListener("touchstart", preventTouch, { passive: false });
+    canvas.addEventListener("touchmove", preventTouchMove, { passive: false });
 
     // Touch controls on canvas
     const onTouchStart = (e: TouchEvent) => {
@@ -65,8 +64,7 @@ export default function Home() {
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("touchmove", preventTouch);
-      document.removeEventListener("touchstart", preventTouch);
+      canvas.removeEventListener("touchmove", preventTouchMove);
       canvas.removeEventListener("touchstart", onTouchStart);
       canvas.removeEventListener("touchmove", onTouchMove);
       canvas.removeEventListener("touchend", onTouchEnd);
@@ -188,13 +186,13 @@ export default function Home() {
               pointerEvents: "auto",
             }}
           >
-            <button onClick={() => startGame("easy")} style={buttonStyle("#2ECC71")}>
+            <button onTouchEnd={(e) => { e.preventDefault(); startGame("easy"); }} onClick={() => startGame("easy")} style={buttonStyle("#2ECC71")}>
               Easy
             </button>
-            <button onClick={() => startGame("medium")} style={buttonStyle("#F39C12")}>
+            <button onTouchEnd={(e) => { e.preventDefault(); startGame("medium"); }} onClick={() => startGame("medium")} style={buttonStyle("#F39C12")}>
               Medium
             </button>
-            <button onClick={() => startGame("hard")} style={buttonStyle("#E74C3C")}>
+            <button onTouchEnd={(e) => { e.preventDefault(); startGame("hard"); }} onClick={() => startGame("hard")} style={buttonStyle("#E74C3C")}>
               Hard
             </button>
           </div>
@@ -237,10 +235,10 @@ export default function Home() {
               marginTop: 60,
             }}
           >
-            <button onClick={playAgain} style={buttonStyle("#2ECC71")}>
+            <button onTouchEnd={(e) => { e.preventDefault(); playAgain(); }} onClick={playAgain} style={buttonStyle("#2ECC71")}>
               Play Again
             </button>
-            <button onClick={goToMenu} style={buttonStyle("#5B7FA5")}>
+            <button onTouchEnd={(e) => { e.preventDefault(); goToMenu(); }} onClick={goToMenu} style={buttonStyle("#5B7FA5")}>
               Menu
             </button>
           </div>
