@@ -152,6 +152,8 @@ export class Game {
   shipY = 0;
   shipWidth = 0;
   shipHeight = 0;
+  shipAngle = 0; // current tilt angle in radians
+  shipPrevX = 0; // previous frame X, used to derive velocity
 
   // Invincibility
   invincible = false;
@@ -316,6 +318,8 @@ export class Game {
     this.collectFlashTimer = 0;
     this.shipX = this.w / 2;
     this.shipTargetX = this.w / 2;
+    this.shipPrevX = this.w / 2;
+    this.shipAngle = 0;
     this.tiltCalibrated = false;
     this.setNextLifeJacket();
     this.state = "playing";
@@ -456,6 +460,12 @@ export class Game {
       Math.min(this.w - shipPadding, this.shipX)
     );
 
+    // Ship pivot based on lateral movement
+    const shipVx = this.shipX - this.shipPrevX;
+    const targetAngle = Math.max(-0.18, Math.min(0.18, shipVx * 0.025));
+    this.shipAngle += (targetAngle - this.shipAngle) * 0.12;
+    this.shipPrevX = this.shipX;
+
     // Timers
     if (this.invincible) {
       this.invincibleTimer -= dt;
@@ -560,13 +570,18 @@ export class Game {
   }
 
   updateSmoke(dt: number) {
-    // Spawn smoke from funnels
-    const funnelOffsets = [-this.shipWidth * 0.12, this.shipWidth * 0.12];
+    // Spawn smoke from four funnels
+    const sw = this.shipWidth;
+    const funnelOffsets = [-sw * 0.16, -sw * 0.055, sw * 0.055, sw * 0.16];
     for (const fx of funnelOffsets) {
-      if (Math.random() < 0.3) {
+      if (Math.random() < 0.25) {
+        // Account for ship rotation on smoke origin
+        const cosA = Math.cos(this.shipAngle);
+        const sinA = Math.sin(this.shipAngle);
+        const localY = -this.shipHeight * 0.46;
         this.smokeParticles.push({
-          x: this.shipX + fx + (Math.random() - 0.5) * 3,
-          y: this.shipY - this.shipHeight * 0.55,
+          x: this.shipX + fx * cosA - localY * sinA + (Math.random() - 0.5) * 2,
+          y: this.shipY + fx * sinA + localY * cosA,
           vy: -(0.3 + Math.random() * 0.4),
           alpha: 0.4 + Math.random() * 0.2,
           radius: 2 + Math.random() * 3,
@@ -701,74 +716,185 @@ export class Game {
 
     ctx.save();
     ctx.translate(x, y);
+    ctx.rotate(this.shipAngle);
 
-    // Hull - tapered shape, bow pointing up
+    // Wake / bow wave (water splash at front)
     ctx.beginPath();
-    ctx.moveTo(0, -sh * 0.5); // bow tip
-    ctx.lineTo(sw * 0.35, -sh * 0.15);
-    ctx.lineTo(sw * 0.4, sh * 0.15);
-    ctx.lineTo(sw * 0.35, sh * 0.35);
-    ctx.quadraticCurveTo(sw * 0.2, sh * 0.5, 0, sh * 0.5); // stern curve
-    ctx.quadraticCurveTo(-sw * 0.2, sh * 0.5, -sw * 0.35, sh * 0.35);
-    ctx.lineTo(-sw * 0.4, sh * 0.15);
-    ctx.lineTo(-sw * 0.35, -sh * 0.15);
-    ctx.closePath();
-
-    // Hull fill
-    ctx.fillStyle = "#F0E6D3";
-    ctx.fill();
-    ctx.strokeStyle = "#8B8070";
+    ctx.moveTo(-sw * 0.25, -sh * 0.48);
+    ctx.quadraticCurveTo(-sw * 0.45, -sh * 0.55, -sw * 0.35, -sh * 0.58);
+    ctx.strokeStyle = "rgba(180, 220, 255, 0.3)";
     ctx.lineWidth = 1.5;
     ctx.stroke();
-
-    // Deck area (slightly inset)
     ctx.beginPath();
-    ctx.moveTo(0, -sh * 0.38);
-    ctx.lineTo(sw * 0.25, -sh * 0.1);
-    ctx.lineTo(sw * 0.28, sh * 0.12);
-    ctx.lineTo(sw * 0.22, sh * 0.28);
-    ctx.quadraticCurveTo(sw * 0.1, sh * 0.38, 0, sh * 0.38);
-    ctx.quadraticCurveTo(-sw * 0.1, sh * 0.38, -sw * 0.22, sh * 0.28);
-    ctx.lineTo(-sw * 0.28, sh * 0.12);
-    ctx.lineTo(-sw * 0.25, -sh * 0.1);
+    ctx.moveTo(sw * 0.25, -sh * 0.48);
+    ctx.quadraticCurveTo(sw * 0.45, -sh * 0.55, sw * 0.35, -sh * 0.58);
+    ctx.stroke();
+
+    // Black hull (lower part of ship - the waterline)
+    ctx.beginPath();
+    ctx.moveTo(0, -sh * 0.52); // bow tip
+    ctx.lineTo(sw * 0.2, -sh * 0.38);
+    ctx.lineTo(sw * 0.38, -sh * 0.1);
+    ctx.lineTo(sw * 0.42, sh * 0.15);
+    ctx.lineTo(sw * 0.38, sh * 0.35);
+    ctx.quadraticCurveTo(sw * 0.2, sh * 0.5, 0, sh * 0.5);
+    ctx.quadraticCurveTo(-sw * 0.2, sh * 0.5, -sw * 0.38, sh * 0.35);
+    ctx.lineTo(-sw * 0.42, sh * 0.15);
+    ctx.lineTo(-sw * 0.38, -sh * 0.1);
+    ctx.lineTo(-sw * 0.2, -sh * 0.38);
     ctx.closePath();
-    ctx.fillStyle = "#D4C8B5";
+    ctx.fillStyle = "#1A1A1A";
     ctx.fill();
 
-    // Deck lines
-    ctx.strokeStyle = "rgba(139, 128, 112, 0.4)";
+    // Red waterline stripe
+    ctx.beginPath();
+    ctx.moveTo(sw * 0.38, sh * 0.28);
+    ctx.lineTo(sw * 0.42, sh * 0.15);
+    ctx.lineTo(sw * 0.41, sh * 0.05);
+    ctx.lineTo(-sw * 0.41, sh * 0.05);
+    ctx.lineTo(-sw * 0.42, sh * 0.15);
+    ctx.lineTo(-sw * 0.38, sh * 0.28);
+    ctx.quadraticCurveTo(-sw * 0.2, sh * 0.42, 0, sh * 0.42);
+    ctx.quadraticCurveTo(sw * 0.2, sh * 0.42, sw * 0.38, sh * 0.28);
+    ctx.closePath();
+    ctx.fillStyle = "#8B1A1A";
+    ctx.fill();
+
+    // Upper hull (cream/white superstructure)
+    ctx.beginPath();
+    ctx.moveTo(0, -sh * 0.5);
+    ctx.lineTo(sw * 0.18, -sh * 0.36);
+    ctx.lineTo(sw * 0.34, -sh * 0.08);
+    ctx.lineTo(sw * 0.36, sh * 0.08);
+    ctx.lineTo(sw * 0.3, sh * 0.15);
+    ctx.lineTo(-sw * 0.3, sh * 0.15);
+    ctx.lineTo(-sw * 0.36, sh * 0.08);
+    ctx.lineTo(-sw * 0.34, -sh * 0.08);
+    ctx.lineTo(-sw * 0.18, -sh * 0.36);
+    ctx.closePath();
+    ctx.fillStyle = "#F5EDE0";
+    ctx.fill();
+    ctx.strokeStyle = "#C8B8A0";
     ctx.lineWidth = 0.8;
-    for (let i = -2; i <= 3; i++) {
-      const ly = sh * 0.07 * i;
-      const lw = sw * 0.2 * (1 - Math.abs(i) * 0.12);
+    ctx.stroke();
+
+    // Superstructure / bridge deck (narrower raised section)
+    ctx.beginPath();
+    ctx.moveTo(sw * 0.02, -sh * 0.4);
+    ctx.lineTo(sw * 0.14, -sh * 0.3);
+    ctx.lineTo(sw * 0.24, -sh * 0.08);
+    ctx.lineTo(sw * 0.26, sh * 0.08);
+    ctx.lineTo(-sw * 0.26, sh * 0.08);
+    ctx.lineTo(-sw * 0.24, -sh * 0.08);
+    ctx.lineTo(-sw * 0.14, -sh * 0.3);
+    ctx.lineTo(-sw * 0.02, -sh * 0.4);
+    ctx.closePath();
+    ctx.fillStyle = "#E8DCC8";
+    ctx.fill();
+
+    // Deck lines (portholes / window rows)
+    ctx.strokeStyle = "rgba(100, 90, 70, 0.3)";
+    ctx.lineWidth = 0.6;
+    const deckYs = [-sh * 0.22, -sh * 0.14, -sh * 0.06, sh * 0.02];
+    for (const dy of deckYs) {
+      const deckHalfW = sw * 0.2 * (1 - Math.abs(dy / sh) * 0.5);
       ctx.beginPath();
-      ctx.moveTo(-lw, ly);
-      ctx.lineTo(lw, ly);
+      ctx.moveTo(-deckHalfW, dy);
+      ctx.lineTo(deckHalfW, dy);
       ctx.stroke();
     }
 
-    // Funnels (smokestacks)
-    const funnelW = sw * 0.08;
-    const funnelH = sw * 0.14;
-    const funnelOffsets = [-sw * 0.12, sw * 0.12];
-    for (const fx of funnelOffsets) {
-      // Funnel body
-      ctx.fillStyle = "#C45B3A";
-      ctx.fillRect(
-        fx - funnelW / 2,
-        -sh * 0.32 - funnelH,
-        funnelW,
-        funnelH
-      );
-      // Funnel top (black band)
-      ctx.fillStyle = "#2A2A2A";
-      ctx.fillRect(
-        fx - funnelW / 2,
-        -sh * 0.32 - funnelH,
-        funnelW,
-        funnelH * 0.25
-      );
+    // Portholes (small dots along deck lines)
+    ctx.fillStyle = "rgba(80, 70, 50, 0.4)";
+    for (const dy of [-sh * 0.18, -sh * 0.1]) {
+      const rowW = sw * 0.18 * (1 - Math.abs(dy / sh) * 0.5);
+      const count = 5;
+      for (let i = 0; i < count; i++) {
+        const px = -rowW + (2 * rowW * i) / (count - 1);
+        ctx.beginPath();
+        ctx.arc(px, dy, sw * 0.012, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
+
+    // Bridge / wheelhouse (small rectangle near bow)
+    ctx.fillStyle = "#D4C8B0";
+    ctx.fillRect(-sw * 0.08, -sh * 0.34, sw * 0.16, sh * 0.05);
+    ctx.fillStyle = "rgba(100, 140, 180, 0.5)";
+    ctx.fillRect(-sw * 0.06, -sh * 0.335, sw * 0.12, sh * 0.035);
+
+    // Four funnels (smokestacks) - the Titanic's signature
+    const funnelW = sw * 0.065;
+    const funnelH = sw * 0.18;
+    const funnelYBase = -sh * 0.28;
+    const funnelPositions = [
+      -sw * 0.16,
+      -sw * 0.055,
+      sw * 0.055,
+      sw * 0.16,
+    ];
+    for (const fx of funnelPositions) {
+      // Funnel shadow
+      ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+      ctx.beginPath();
+      ctx.ellipse(fx + 1, funnelYBase + 1, funnelW / 2 + 1, funnelW * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Funnel body - buff/ochre with black top (Titanic's colors)
+      ctx.fillStyle = "#CC8844";
+      const fTop = funnelYBase - funnelH;
+      ctx.beginPath();
+      ctx.moveTo(fx - funnelW / 2, funnelYBase);
+      ctx.lineTo(fx - funnelW * 0.4, fTop);
+      ctx.lineTo(fx + funnelW * 0.4, fTop);
+      ctx.lineTo(fx + funnelW / 2, funnelYBase);
+      ctx.closePath();
+      ctx.fill();
+
+      // Black band at top
+      ctx.fillStyle = "#1A1A1A";
+      ctx.beginPath();
+      ctx.moveTo(fx - funnelW * 0.42, fTop + funnelH * 0.08);
+      ctx.lineTo(fx - funnelW * 0.4, fTop);
+      ctx.lineTo(fx + funnelW * 0.4, fTop);
+      ctx.lineTo(fx + funnelW * 0.42, fTop + funnelH * 0.08);
+      ctx.closePath();
+      ctx.fill();
+
+      // Funnel opening (dark ellipse at top)
+      ctx.beginPath();
+      ctx.ellipse(fx, fTop, funnelW * 0.35, funnelW * 0.15, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#111";
+      ctx.fill();
+    }
+
+    // Mast (thin line from bow area)
+    ctx.strokeStyle = "#5A5040";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -sh * 0.34);
+    ctx.lineTo(0, -sh * 0.56);
+    ctx.stroke();
+
+    // Mast rigging lines
+    ctx.strokeStyle = "rgba(90, 80, 64, 0.3)";
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, -sh * 0.56);
+    ctx.lineTo(-sw * 0.22, -sh * 0.15);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, -sh * 0.56);
+    ctx.lineTo(sw * 0.22, -sh * 0.15);
+    ctx.stroke();
+
+    // Stern mast
+    ctx.strokeStyle = "#5A5040";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, sh * 0.08);
+    ctx.lineTo(0, -sh * 0.1);
+    ctx.stroke();
 
     ctx.restore();
   }
