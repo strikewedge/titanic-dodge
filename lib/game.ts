@@ -22,8 +22,8 @@ const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
   easy: {
     baseSpeed: 1.5,
     speedRamp: 0.05,
-    spawnIntervalStart: 1800,
-    spawnIntervalMin: 700,
+    spawnIntervalStart: 2200,
+    spawnIntervalMin: 900,
     icebergSizeMin: 30,
     icebergSizeMax: 50,
     lifeJacketFreqMin: 15,
